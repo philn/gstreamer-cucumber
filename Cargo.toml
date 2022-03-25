@@ -1,0 +1,34 @@
+[package]
+name = "gstreamer-cucumber"
+version = "0.1.0"
+edition = "2021"
+description = "Behavior-Driven Development framework for GStreamer"
+authors = ["Thibault Saunier <tsaunier@igalia.com>", "Philippe Normand <philn@igalia.com"]
+license = "MIT"
+repository = "https://github.com/philn/gstreamer-cucumber"
+documentation = "https://philn.github.io/gstreamer-cucumber/"
+keywords = ["multimedia"]
+categories = ["multimedia"]
+readme = "README.md"
+
+[dependencies]
+cucumber = "0.12"
+async-trait = "0.1.52"
+#gst = { path = "../gstreamer-rs/gstreamer", package = "gstreamer", features = ["v1_20", "ser_de"] }
+#gstvalidate = { path = "../gstreamer-rs/gstreamer-validate", package = "gstreamer-validate" }
+#gstvideo = { path = "../gstreamer-rs/gstreamer-video", package = "gstreamer-video", features = ["v1_20"] }
+gst = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer", features = ["v1_20", "ser_de"] }
+gstvideo = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-video" }
+gstvalidate = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-validate" }
+anyhow = "1"
+tempfile = "3"
+once_cell = "1.0"
+futures = "0.3.17"
+async-std = {version = "1.10.0", features = ["attributes"]}
+color-thief = "0.2"
+color-name = "1.0.0"
+glib = "0.15"
+
+[[test]]
+name = "basic"
+harness = false

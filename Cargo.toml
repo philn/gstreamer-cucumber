@@ -14,9 +14,6 @@ readme = "README.md"
 [dependencies]
 cucumber = "0.12"
 async-trait = "0.1.52"
-#gst = { path = "../gstreamer-rs/gstreamer", package = "gstreamer", features = ["v1_20", "ser_de"] }
-#gstvalidate = { path = "../gstreamer-rs/gstreamer-validate", package = "gstreamer-validate" }
-#gstvideo = { path = "../gstreamer-rs/gstreamer-video", package = "gstreamer-video", features = ["v1_20"] }
 gst = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer", features = ["v1_20", "ser_de"] }
 gstvideo = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-video" }
 gstvalidate = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-validate" }

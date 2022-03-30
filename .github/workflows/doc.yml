@@ -9,6 +9,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  call-build:
+    uses: ./.github/workflows/rust.yml
   release:
     name: Deploy Documentation
     runs-on: ubuntu-latest

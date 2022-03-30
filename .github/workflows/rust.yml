@@ -30,7 +30,7 @@ jobs:
         sudo python -m pip install --upgrade pip setuptools wheel
         sudo pip install meson==0.60.3
 
-    - name: Build GStreamer 1.20
+    - name: Build GStreamer 1.21
       run: |
         git clone --depth 1 https://gitlab.freedesktop.org/gstreamer/gstreamer.git --branch main
         pushd gstreamer

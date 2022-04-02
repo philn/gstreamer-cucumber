@@ -21,7 +21,7 @@ static CAT: Lazy<gst::DebugCategory> =
 
 #[derive(Debug, WorldInit)]
 pub struct World {
-    pipeline: gst::Pipeline,
+    pipeline: Option<gst::Element>,
     runner: Option<gstvalidate::Runner>,
     monitor: Option<gstvalidate::Monitor>,
 
@@ -33,10 +33,10 @@ pub struct World {
     pub extra_data: gst::Structure,
 }
 
-/// Main entry point for the test harness. Input is the path to a Gherkin
-/// .feature file defining the scenario to run. `extra_data` is an optional
-/// storage that will store data gathered from additional test steps.
 impl World {
+    /// Main entry point for the test harness. Input is the path to a Gherkin
+    /// .feature file defining the scenario to run. `extra_data` is an optional
+    /// storage that will store data gathered from additional test steps.
     pub async fn run<I>(input: I, extra_data: Option<gst::Structure>)
     where
         I: AsRef<Path>,
@@ -68,6 +68,72 @@ impl World {
             .run_and_exit(input)
             .await
     }
+
+    /// Create the pipeline based on the given GStreamer parse-launch
+    /// description. This method can be implicitely called from Gherkin in cases
+    /// where the pipeline being tested is static, using the `Given Pipeline is '...'` step.
+    ///
+    /// Alternatively this method can be called from a custom third-party Gherkin
+    /// step, in cases where the pipeline to set-up depends on third-party
+    /// configuration parameters.
+    pub fn set_pipeline(&mut self, pipeline: String) -> Result<(), anyhow::Error> {
+        gst::debug!(CAT, "Pipeline is: '{}'", pipeline);
+        self.pipeline = Some(gst::parse_launch(&pipeline)?);
+        Ok(())
+    }
+
+    /// Pipeline accessor, useful for interacting with the pipeline (sending
+    /// events for instance) from third-party Gherin steps.
+    pub fn get_pipeline(&self) -> Result<&gst::Element, anyhow::Error> {
+        self.pipeline
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("Pipeline not configured yet"))
+    }
+
+    fn find_element_property(
+        &self,
+        propname: &str,
+    ) -> Result<(glib::ParamSpec, glib::Object), anyhow::Error> {
+        let pipeline = self.get_pipeline()?;
+        let tokens = propname.split("::");
+        let mut pspec = None::<glib::ParamSpec>;
+        let mut obj = None::<glib::Object>;
+
+        for token in tokens {
+            match obj {
+                Some(o) => {
+                    debug_assert!(pspec.is_none(), "Invalid property specifier {}", propname);
+                    pspec = o
+                        .find_property(token)
+                        .or_else(|| panic!("Couldn't find element {}", token));
+
+                    let tmpspec = pspec.unwrap().clone();
+                    if tmpspec.value_type() == glib::Object::static_type() {
+                        obj = Some(o.property::<glib::Object>(token));
+                        pspec = None;
+                    } else {
+                        obj = Some(o.clone());
+                        pspec = Some(tmpspec);
+                    }
+                }
+                None => {
+                    obj = pipeline
+                        .downcast_ref::<gst::Bin>()
+                        .unwrap()
+                        .by_name(token)
+                        .map_or_else(
+                            || panic!("Couldn't find element {}", token),
+                            |v| Some(v.upcast()),
+                        );
+                }
+            }
+        }
+
+        match (pspec, obj) {
+            (Some(pspec), Some(obj)) => Ok((pspec, obj)),
+            _ => panic!("Couldn't find object property: {}", propname),
+        }
+    }
 }
 
 #[async_trait(?Send)]
@@ -76,7 +142,7 @@ impl cucumber::World for World {
 
     async fn new() -> Result<Self, Self::Error> {
         Ok(Self {
-            pipeline: gst::Pipeline::new(None),
+            pipeline: None,
             runner: None,
             monitor: None,
             validateconfig: None,
@@ -89,50 +155,7 @@ impl cucumber::World for World {
 
 #[given(regex = r"Pipeline is '(.*)'$")]
 fn set_pipeline(world: &mut World, pipeline: String) -> Result<(), anyhow::Error> {
-    gst::debug!(CAT, "Pipeline is: '{}'", pipeline);
-    world
-        .pipeline
-        .add(&gst::parse_bin_from_description(&pipeline, false)?)
-        .expect("Could not setup pipeline");
-
-    Ok(())
-}
-
-fn find_element(pipeline: &gst::Pipeline, propname: &str) -> (glib::ParamSpec, glib::Object) {
-    let tokens = propname.split("::");
-    let mut pspec = None::<glib::ParamSpec>;
-    let mut obj = None::<glib::Object>;
-
-    for token in tokens {
-        match obj {
-            Some(o) => {
-                debug_assert!(pspec.is_none(), "Invalid property specifier {}", propname);
-                pspec = o
-                    .find_property(token)
-                    .or_else(|| panic!("Couldn't find element {}", token));
-
-                let tmpspec = pspec.unwrap().clone();
-                if tmpspec.value_type() == glib::Object::static_type() {
-                    obj = Some(o.property::<glib::Object>(token));
-                    pspec = None;
-                } else {
-                    obj = Some(o.clone());
-                    pspec = Some(tmpspec);
-                }
-            }
-            None => {
-                obj = pipeline.by_name(token).map_or_else(
-                    || panic!("Couldn't find element {}", token),
-                    |v| Some(v.upcast()),
-                );
-            }
-        }
-    }
-
-    match (pspec, obj) {
-        (Some(pspec), Some(obj)) => (pspec, obj),
-        _ => panic!("Couldn't find object property: {}", propname),
-    }
+    world.set_pipeline(pipeline)
 }
 
 #[when(expr = "I wait for {word} {word}")]
@@ -151,16 +174,17 @@ async fn wait(_w: &mut World, v: u64, unit: String) {
 }
 
 #[when(expr = "I set property {word} to {word}")]
-fn set_property(w: &mut World, propname: String, value: String) {
-    let (pspec, obj) = find_element(&w.pipeline, &propname);
+fn set_property(w: &mut World, propname: String, value: String) -> Result<(), anyhow::Error> {
+    let (pspec, obj) = w.find_element_property(&propname)?;
 
     gst::debug!(CAT, "Setting {}={}", propname, value);
     obj.set_property_from_str(pspec.name(), &value);
+    Ok(())
 }
 
 #[then(expr = "Property {word} equals {word}")]
-fn get_property(w: &mut World, propname: String, value: String) {
-    let (pspec, obj) = find_element(&w.pipeline, &propname);
+fn get_property(w: &mut World, propname: String, value: String) -> Result<(), anyhow::Error> {
+    let (pspec, obj) = w.find_element_property(&propname)?;
 
     let v = glib::Value::deserialize_with_pspec(&value, &pspec).unwrap();
     let obj_value = obj.property_value(pspec.name());
@@ -171,6 +195,7 @@ fn get_property(w: &mut World, propname: String, value: String) {
         obj_value.serialize().unwrap(),
         v.serialize().unwrap()
     );
+    Ok(())
 }
 
 #[then(expr = "Validate should not report any issue")]
@@ -198,7 +223,7 @@ fn add_validate_config(w: &mut World, config: String) {
 }
 
 #[given(expr = "Validate is activated")]
-fn activate_validate(w: &mut World) {
+fn activate_validate(w: &mut World) -> Result<(), anyhow::Error> {
     debug_assert!(w.runner.is_none(), "Validate has already been activated");
 
     if let Some(validateconfig) = w.validateconfig.take() {
@@ -217,44 +242,58 @@ fn activate_validate(w: &mut World) {
     gstvalidate::init();
     let runner = gstvalidate::Runner::new();
     let _ = w.runner.insert(runner.clone());
+    let pipeline = w.get_pipeline()?;
     w.monitor = gstvalidate::Monitor::factory_create(
-        w.pipeline.upcast_ref::<gst::Object>(),
+        pipeline.upcast_ref::<gst::Object>(),
         &runner,
         gstvalidate::Monitor::NONE,
     );
+    Ok(())
 }
 
 #[when(expr = "I {word} the pipeline")]
-fn set_state(w: &mut World, state: String) {
-    if let Err(err) = w.pipeline.set_state(match state.as_str() {
-        "stop" => gst::State::Null,
-        "prepare" => gst::State::Ready,
-        "pause" => gst::State::Paused,
-        "play" => gst::State::Playing,
-        _ => panic!("Invalid state name: {}", state),
-    }) {
-        panic!("Could not set pipeline to {}: {:?}", state, err);
-    }
+fn set_state(w: &mut World, state: String) -> Result<(), anyhow::Error> {
+    w.get_pipeline()?
+        .set_state(match state.as_str() {
+            "stop" => gst::State::Null,
+            "prepare" => gst::State::Ready,
+            "pause" => gst::State::Paused,
+            "play" => gst::State::Playing,
+            _ => panic!("Invalid state name: {}", state),
+        })
+        .map(|_| ())
+        .map_err(|_| anyhow::anyhow!("Unable to set pipeline state"))
 }
 
 fn get_last_frame(w: &World, element_name: &str) -> Result<gst::Sample, anyhow::Error> {
     let element = w
-        .pipeline
+        .get_pipeline()?
+        .downcast_ref::<gst::Bin>()
+        .unwrap()
         .by_name_recurse_up(element_name)
         .ok_or_else(|| anyhow::anyhow!("Could not find element: {}", element_name))?;
 
+    get_last_frame_on_element(w, &element)
+}
+
+/// Retrieve the most recent gst::Sample from the given video sink. We assume
+/// the `enable-last-sample` property is enabled on this element.
+pub fn get_last_frame_on_element(
+    _w: &World,
+    element: &gst::Element,
+) -> Result<gst::Sample, anyhow::Error> {
     let enable_last_sample = element
         .try_property::<bool>("enable-last-sample")
         .map_err(|e| {
             anyhow::anyhow!(
                 "No property `enable-last-sample` on {}: {:?}",
-                element_name,
+                element.name(),
                 e
             )
         })?;
 
     if !enable_last_sample {
-        return Err(anyhow::anyhow!("Property `enable-last-sample` not `true` on: {} - you need to set it when defining the pipeline", element_name));
+        return Err(anyhow::anyhow!("Property `enable-last-sample` not `true` on: {} - you need to set it when defining the pipeline", element.name()));
     }
 
     Ok(element.property::<gst::Sample>("last-sample"))
@@ -262,7 +301,7 @@ fn get_last_frame(w: &World, element_name: &str) -> Result<gst::Sample, anyhow::
 
 #[then(expr = "The user can see a frame on {word}")]
 fn check_last_frame(w: &mut World, element_name: String) -> Result<(), anyhow::Error> {
-    let _ = w.pipeline.state(gst::ClockTime::NONE);
+    let _ = w.get_pipeline()?.state(gst::ClockTime::NONE);
 
     get_last_frame(w, &element_name).map(|_| ())
 }
@@ -273,6 +312,24 @@ async fn check_significant_color(
     expected: String,
     sink_name: String,
 ) -> Result<(), anyhow::Error> {
+    let sink = w
+        .get_pipeline()?
+        .downcast_ref::<gst::Bin>()
+        .unwrap()
+        .by_name_recurse_up(&sink_name)
+        .ok_or_else(|| anyhow::anyhow!("Could not find element: {}", sink_name))?;
+
+    check_significant_color_on_element(w, expected, &sink).await
+}
+
+/// Verify that the dominant color on the given video sink is the one described
+/// by `expected`. This function returns an error after 5 seconds of mis-matched
+/// frames polling.
+pub async fn check_significant_color_on_element(
+    w: &mut World,
+    expected: String,
+    sink: &gst::Element,
+) -> Result<(), anyhow::Error> {
     let start = SystemTime::now();
     let mut first_expected: Option<SystemTime> = None;
 
@@ -280,7 +337,7 @@ async fn check_significant_color(
     let timeout = Duration::from_secs(5);
 
     loop {
-        let sample = get_last_frame(w, &sink_name)?;
+        let sample = get_last_frame_on_element(w, sink)?;
 
         let in_info = gstvideo::VideoInfo::from_caps(sample.caps().expect("No caps in sample"))
             .unwrap_or_else(|_| panic!("Invalid video caps: {}", sample.caps().unwrap()));
@@ -344,7 +401,7 @@ async fn check_significant_color(
                 return Err(anyhow::anyhow!(
                     "Timeout reached, color {} not detected on {} after {} seconds",
                     expected,
-                    sink_name,
+                    sink.name(),
                     timeout.as_secs()
                 ));
             }
@@ -356,4 +413,15 @@ async fn check_significant_color(
         ))
         .await;
     }
+}
+
+// Re-export all the traits in a prelude module, so that applications
+// can always "use gstreamer_cucumber::prelude::*" without getting conflicts
+pub mod prelude {
+    pub use crate::{check_significant_color_on_element, get_last_frame_on_element, World};
+    pub use cucumber::*;
+    pub use glib;
+    pub use gst;
+    #[doc(hidden)]
+    pub use gst::prelude::*;
 }

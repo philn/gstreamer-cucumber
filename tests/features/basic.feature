@@ -2,8 +2,8 @@ Feature: Basic pipeline manipulation
 
   Background:
     Given The validate configuration 'validateflow, expectations-dir=tmp/, pad=sink:sink, ignored-event-types={ tag }'
-    Given Validate is activated
     Given Pipeline is 'videotestsrc name=src ! fakevideosink enable-last-sample=true name=sink'
+    Given Validate is activated
 
   Scenario: video source pattern
     When I play the pipeline

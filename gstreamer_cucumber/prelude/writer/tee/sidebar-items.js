@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Tee","Wrapper for passing events to multiple terminating [`Writer`]s simultaneously."]]});

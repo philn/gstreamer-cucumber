@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Styles","[`Style`]s for terminal output."],["WritableString","[`String`] wrapper implementing [`io::Write`]."]],"trait":[["WriteStrExt","[`io::Write`] extension for easier manipulation with strings and special sequences."]]});

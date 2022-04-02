@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["World",""]]});
+initSidebarItems({"fn":[["check_significant_color_on_element","Verify that the dominant color on the given video sink is the one described by `expected`. This function returns an error after 5 seconds of mis-matched frames polling."],["get_last_frame_on_element","Retrieve the most recent gst::Sample from the given video sink. We assume the `enable-last-sample` property is enabled on this element."]],"mod":[["prelude",""]],"struct":[["World",""]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["FailOnSkipped","[`Writer`]-wrapper for transforming `Skipped` `Step`s into `Failed`."]],"type":[["SkipFn","Alias for a [`fn`] used to determine whether `Skipped` test should be considered as `Failed` or not."]]});

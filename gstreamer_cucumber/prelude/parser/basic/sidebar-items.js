@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Basic","Default [`Parser`]."],["Cli","CLI options of a [`Basic`] [`Parser`]."],["UnsupportedLanguageError","Error of [`gherkin`] not supporting keywords in some language."],["Walker","Wrapper over [`GlobWalker`] implementing a [`FromStr`]."]]});

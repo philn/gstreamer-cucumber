@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Coloring","Possible policies of a [`console`] output coloring."]],"struct":[["Basic","Default [`Writer`] implementation outputting to an [`io::Write`] implementor ([`io::Stdout`] by default)."],["Cli","CLI options of a [`Basic`] [`Writer`]."]]});

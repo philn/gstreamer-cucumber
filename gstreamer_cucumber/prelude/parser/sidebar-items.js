@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Error","[`Parser`] error."]],"mod":[["basic","Default [`Parser`] implementation."]],"struct":[["Basic","Default [`Parser`]."]],"trait":[["Parser","Source of parsed `Feature`s."]],"type":[["Result","Result of parsing Gherkin files."]]});

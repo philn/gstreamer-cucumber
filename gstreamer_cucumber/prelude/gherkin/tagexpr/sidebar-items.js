@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["TagOperation","A parsed tree of operations for Gherkin tags."]]});

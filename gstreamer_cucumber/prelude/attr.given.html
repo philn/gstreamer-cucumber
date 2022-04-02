@@ -1,0 +1,79 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Attribute to auto-wire the test to the `World` implementer."><meta name="keywords" content="rust, rustlang, rust-lang, given"><title>given in gstreamer_cucumber::prelude - Rust</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" type="text/css" href="../../normalize.css"><link rel="stylesheet" type="text/css" href="../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" type="text/css" href="../../ayu.css" disabled><link rel="stylesheet" type="text/css" href="../../dark.css" disabled><link rel="stylesheet" type="text/css" href="../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../storage.js"></script><script src="../../crates.js"></script><script defer src="../../main.js"></script>
+    <noscript><link rel="stylesheet" href="../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../favicon.svg"></head><body class="rustdoc attr"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="sidebar-menu" role="button">&#9776;</div><a class="sidebar-logo" href="../../gstreamer_cucumber/index.html"><div class="logo-container"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></div>
+        </a><div class="sidebar-elems"><h2 class="location">Other items in<br><a href="../index.html">gstreamer_cucumber</a>::<wbr><a href="index.html">prelude</a></h2><div id="sidebar-vars" data-name="given" data-ty="attr" data-relpath=""></div><script defer src="sidebar-items.js"></script></div></nav><main><div class="width-limiter"><div class="sub-container"><a class="sub-logo-container" href="../../gstreamer_cucumber/index.html"><img class="rust-logo" src="../../rust-logo.png" alt="logo"></a><nav class="sub"><div class="theme-picker"><button id="theme-picker" aria-label="Pick another theme!" aria-haspopup="menu" title="themes"><img width="18" height="18" alt="Pick another theme!" src="../../brush.svg"></button><div id="theme-choices" role="menu"></div></div><form class="search-form"><div class="search-container"><div><select id="crate-search"><option value="All crates">All crates</option></select><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"></div><button type="button" id="help-button" title="help">?</button><a id="settings-menu" href="../../settings.html" title="settings"><img width="18" height="18" alt="Change settings" src="../../wheel.svg"></a></div></form></nav></div><section id="main-content" class="content"><h1 class="fqn"><span class="in-band">Attribute Macro <a href="../index.html">gstreamer_cucumber</a>::<wbr><a href="index.html">prelude</a>::<wbr><a class="attr" href="#">given</a><button id="copy-path" onclick="copy_path(this)" title="Copy item path to clipboard"><img src="../../clipboard.svg" width="19" height="18" alt="Copy item path"></button></span><span class="out-of-band"><span id="render-detail"><a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">[<span class="inner">&#x2212;</span>]</a></span></span></h1><div class="docblock item-decl"><pre class="rust attr"><code>#[given]</code></pre></div><details class="rustdoc-toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Attribute to auto-wire the test to the <a href="https://bit.ly/3j0aWw7"><code>World</code></a> implementer.</p>
+<p>There are 3 step-specific attributes:</p>
+<ul>
+<li><a href="attr.given.html" title="given"><code>given</code></a></li>
+<li><a href="attr.when.html" title="when"><code>when</code></a></li>
+<li><a href="attr.then.html" title="then"><code>then</code></a></li>
+</ul>
+<h2 id="example" class="section-header"><a href="#example">Example</a></h2>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use</span> <span class="ident">cucumber</span>::{<span class="ident">given</span>, <span class="ident">when</span>, <span class="ident">World</span>, <span class="ident">WorldInit</span>};
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">WorldInit</span>)]</span>
+<span class="kw">struct</span> <span class="ident">MyWorld</span>;
+
+<span class="attribute">#[<span class="ident">async_trait</span>(<span class="question-mark">?</span><span class="ident">Send</span>)]</span>
+<span class="kw">impl</span> <span class="ident">World</span> <span class="kw">for</span> <span class="ident">MyWorld</span> {
+    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="ident">Infallible</span>;
+
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">new</span>() -&gt; <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="ident"><span class="self">Self</span>::Error</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span>)
+    }
+}
+
+<span class="attribute">#[<span class="ident">given</span>(<span class="ident">regex</span> <span class="op">=</span> <span class="string">r&quot;(\S+) is (\d+)&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">when</span>(<span class="ident">expr</span> <span class="op">=</span> <span class="string">&quot;{word} is {int}&quot;</span>)]</span>
+<span class="kw">fn</span> <span class="ident">test</span>(<span class="ident">w</span>: <span class="kw-2">&amp;mut</span> <span class="ident">MyWorld</span>, <span class="ident">param</span>: <span class="ident">String</span>, <span class="ident">num</span>: <span class="ident">i32</span>) {
+    <span class="macro">assert_eq!</span>(<span class="ident">param</span>, <span class="string">&quot;foo&quot;</span>);
+    <span class="macro">assert_eq!</span>(<span class="ident">num</span>, <span class="number">0</span>);
+}
+
+<span class="attribute">#[<span class="ident">tokio::main</span>]</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">main</span>() {
+    <span class="ident">MyWorld::run</span>(<span class="string">&quot;./tests/features/doctests.feature&quot;</span>).<span class="kw">await</span>;
+}</code></pre></div>
+<h2 id="attribute-arguments" class="section-header"><a href="#attribute-arguments">Attribute arguments</a></h2>
+<ul>
+<li>
+<p><code>#[given(regex = &quot;regex&quot;)]</code></p>
+<p>Uses <a href="regex::Regex"><code>Regex</code></a> for matching the step. <a href="regex::Regex"><code>Regex</code></a> is checked at
+compile time to have valid syntax.</p>
+</li>
+<li>
+<p><code>#[given(expr = &quot;cucumber-expression&quot;)]</code></p>
+<p>Uses <a href="cucumber_expressions">Cucumber Expression</a> for matching the step. It’s checked
+at compile time to have valid syntax.</p>
+</li>
+<li>
+<p><code>#[given(&quot;literal&quot;)]</code></p>
+<p>Matches the step with an <strong>exact</strong> literal only. Doesn’t allow any
+values capturing to use as function arguments.</p>
+</li>
+</ul>
+<h2 id="function-arguments" class="section-header"><a href="#function-arguments">Function arguments</a></h2>
+<ul>
+<li>First argument has to be mutable reference to the <a href="derive.WorldInit.html" title="WorldInit"><code>WorldInit</code></a>
+deriver (your <a href="https://bit.ly/3j0aWw7"><code>World</code></a> implementer).</li>
+<li>Other argument’s types have to implement <a href="codegen/inventory/core/str/trait.FromStr.html"><code>FromStr</code></a> or it has to
+be a slice where the element type also implements <a href="codegen/inventory/core/str/trait.FromStr.html"><code>FromStr</code></a>.</li>
+<li>To use <a href="https://bit.ly/3j42hcd"><code>gherkin::Step</code></a>, name the argument as <code>step</code>,
+<strong>or</strong> mark the argument with a <code>#[step]</code> attribute.</li>
+</ul>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attribute">#[<span class="ident">given</span>(<span class="ident">regex</span> <span class="op">=</span> <span class="string">r&quot;(\S+) is not (\S+)&quot;</span>)]</span>
+<span class="kw">fn</span> <span class="ident">test_step</span>(
+    <span class="ident">w</span>: <span class="kw-2">&amp;mut</span> <span class="ident">MyWorld</span>,
+    <span class="attribute">#[<span class="ident">step</span>]</span> <span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">Step</span>,
+    <span class="ident">matches</span>: <span class="kw-2">&amp;</span>[<span class="ident">String</span>],
+) {
+    <span class="macro">assert_eq!</span>(<span class="ident">matches</span>[<span class="number">0</span>], <span class="string">&quot;foo&quot;</span>);
+    <span class="macro">assert_eq!</span>(<span class="ident">matches</span>[<span class="number">1</span>], <span class="string">&quot;bar&quot;</span>);
+    <span class="macro">assert_eq!</span>(<span class="ident">s</span>.<span class="ident">value</span>, <span class="string">&quot;foo is not bar&quot;</span>);
+}</code></pre></div>
+<h2 id="return-value" class="section-header"><a href="#return-value">Return value</a></h2>
+<p>A function may also return a <a href="codegen/inventory/core/result/enum.Result.html" title="Result"><code>Result</code></a>, which <a href="codegen/inventory/core/result/enum.Result.html#variant.Err" title="Err"><code>Err</code></a> is expected
+to implement <a href="codegen/inventory/core/fmt/trait.Display.html"><code>Display</code></a>, so returning it will cause the step to
+fail.</p>
+</div></details></section><section id="search" class="content hidden"></section></div></main><div id="rustdoc-vars" data-root-path="../../" data-current-crate="gstreamer_cucumber" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.59.0 (9d1b2106e 2022-02-23)" ></div>
+</body></html>

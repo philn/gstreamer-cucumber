@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Repeat","Wrapper for a [`Writer`] implementation for re-outputting events at the end of an output, based on a filter predicated."]],"type":[["FilterEvent","Alias for a [`fn`] predicate deciding whether an event should be re-outputted or not."]]});

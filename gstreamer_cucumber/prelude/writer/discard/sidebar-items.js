@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Arbitrary","Wrapper providing a no-op `ArbitraryWriter` implementation."],["Failure","Wrapper providing a no-op `FailureWriter` implementation returning only `0`."]]});

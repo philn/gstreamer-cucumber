@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["gstreamer_cucumber"] = [{"text":"impl <a class=\"trait\" href=\"gstreamer_cucumber/prelude/codegen/trait.WorldInventory.html\" title=\"trait gstreamer_cucumber::prelude::codegen::WorldInventory\">WorldInventory</a> for <a class=\"struct\" href=\"gstreamer_cucumber/struct.World.html\" title=\"struct gstreamer_cucumber::World\">World</a>","synthetic":false,"types":["gstreamer_cucumber::World"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

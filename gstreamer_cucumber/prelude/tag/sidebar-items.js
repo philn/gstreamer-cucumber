@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["Ext","Extension of a [`TagOperation`] allowing to evaluate it."]]});

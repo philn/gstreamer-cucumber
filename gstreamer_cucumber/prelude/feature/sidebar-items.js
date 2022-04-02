@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ExpandExamplesError","Error of `Scenario Outline` expansion encountering an unknown template."]],"trait":[["Ext","Helper methods to operate on [`gherkin::Feature`]s."]]});

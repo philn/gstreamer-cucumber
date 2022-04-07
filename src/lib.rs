@@ -89,10 +89,20 @@ impl World {
     /// Alternatively this method can be called from a custom third-party Gherkin
     /// step, in cases where the pipeline to set-up depends on third-party
     /// configuration parameters.
-    pub fn set_pipeline(&mut self, pipeline: String) -> Result<(), anyhow::Error> {
-        gst::debug!(CAT, "Pipeline is: '{}'", pipeline);
-        self.pipeline = Some(gst::parse_launch(&pipeline)?);
+    pub fn set_pipeline_from_description(
+        &mut self,
+        pipeline_description: String,
+    ) -> Result<(), anyhow::Error> {
+        gst::debug!(CAT, "Pipeline is: '{}'", pipeline_description);
+        self.pipeline = Some(gst::parse_launch(&pipeline_description)?);
         Ok(())
+    }
+
+    /// Set the pipeline from an already created GStreamer pipeline. This can be
+    /// used for dynamic pipelines, directly involving `decodebin` GStreamer
+    /// elements for instance.
+    pub fn set_pipeline(&mut self, pipeline: gst::Element) {
+        self.pipeline = Some(pipeline);
     }
 
     /// Pipeline accessor, useful for interacting with the pipeline (sending
@@ -173,7 +183,7 @@ impl cucumber::World for World {
 
 #[given(regex = r"Pipeline is '(.*)'$")]
 fn set_pipeline(world: &mut World, pipeline: String) -> Result<(), anyhow::Error> {
-    world.set_pipeline(pipeline)
+    world.set_pipeline_from_description(pipeline)
 }
 
 #[when(expr = "I wait for {word} {word}")]

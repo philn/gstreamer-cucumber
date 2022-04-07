@@ -1,31 +1,43 @@
 use async_std::task;
 use async_trait::async_trait;
 use cucumber::{given, then, when, WorldInit};
-use gst::glib;
-use gst::prelude::*;
-use gstvalidate::prelude::*;
+use gstreamer::glib;
+use gstreamer::prelude::*;
 use once_cell::sync::Lazy;
 use std::cmp;
 use std::convert::Infallible;
-use std::env;
-use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
-use tempfile::NamedTempFile;
+
+#[cfg(feature = "validate")]
+use gstreamer_validate::prelude::*;
+
+use gstreamer as gst;
+use gstreamer_video as gstvideo;
+
+#[cfg(feature = "validate")]
+use gstreamer_validate as gstvalidate;
 
 static CAT: Lazy<gst::DebugCategory> =
     Lazy::new(|| gst::DebugCategory::new("cucumber", gst::DebugColorFlags::empty(), Some("🥒")));
 
+#[cfg(feature = "validate")]
+#[derive(Debug)]
+struct Validate {
+    runner: Option<gstvalidate::Runner>,
+    monitor: Option<gstvalidate::Monitor>,
+    validateconfig: Option<tempfile::NamedTempFile>,
+}
+
 #[derive(Debug, WorldInit)]
 pub struct World {
     pipeline: Option<gst::Element>,
-    runner: Option<gstvalidate::Runner>,
-    monitor: Option<gstvalidate::Monitor>,
 
-    validateconfig: Option<NamedTempFile>,
+    #[cfg(feature = "validate")]
+    validate: Validate,
 
     current_feature_path: Option<PathBuf>,
 
@@ -55,10 +67,11 @@ impl World {
                     gst::info!(CAT, "Before: {:?} {:?}", feature, world);
                 })
             })
-            .after(|_, _, _, world| {
+            .after(|_, _, _, _world| {
                 Box::pin(async move {
-                    if let Some(world) = world.as_ref() {
-                        if let Some(runner) = &world.runner {
+                    #[cfg(feature = "validate")]
+                    if let Some(world) = _world.as_ref() {
+                        if let Some(runner) = &world.validate.runner {
                             let res = runner.exit(true);
                             debug_assert!(res == 0, "Reported issues: {:?}", runner.reports());
                         }
@@ -141,12 +154,17 @@ impl cucumber::World for World {
     type Error = Infallible;
 
     async fn new() -> Result<Self, Self::Error> {
-        Ok(Self {
-            pipeline: None,
+        #[cfg(feature = "validate")]
+        let validate = Validate {
             runner: None,
             monitor: None,
             validateconfig: None,
+        };
 
+        Ok(Self {
+            pipeline: None,
+            #[cfg(feature = "validate")]
+            validate,
             current_feature_path: None,
             extra_data: gst::Structure::new_empty("extra"),
         })
@@ -186,7 +204,8 @@ fn set_property(w: &mut World, propname: String, value: String) -> Result<(), an
 fn get_property(w: &mut World, propname: String, value: String) -> Result<(), anyhow::Error> {
     let (pspec, obj) = w.find_element_property(&propname)?;
 
-    let v = glib::Value::deserialize_with_pspec(&value, &pspec).unwrap();
+    // FIXME: Use glib::Value::deserialize_with_pspec() when we can depend on 1.20 API.
+    let v = glib::Value::deserialize(&value, pspec.type_()).unwrap();
     let obj_value = obj.property_value(pspec.name());
     debug_assert!(
         v.compare(&obj_value).unwrap() == cmp::Ordering::Equal,
@@ -199,9 +218,13 @@ fn get_property(w: &mut World, propname: String, value: String) -> Result<(), an
 }
 
 #[then(expr = "Validate should not report any issue")]
+#[cfg(feature = "validate")]
 fn validate_no_reports(w: &mut World) -> Result<(), anyhow::Error> {
-    match &w.runner {
-        None => debug_assert!(w.runner.is_some(), "Validate hasn't been activated"),
+    match &w.validate.runner {
+        None => debug_assert!(
+            w.validate.runner.is_some(),
+            "Validate hasn't been activated"
+        ),
         Some(runner) => debug_assert!(
             runner.reports_count() == 0,
             "Reported issues: {}",
@@ -213,20 +236,27 @@ fn validate_no_reports(w: &mut World) -> Result<(), anyhow::Error> {
 }
 
 #[given(regex = r"The validate configuration '(.*)'$")]
+#[cfg(feature = "validate")]
 fn add_validate_config(w: &mut World, config: String) {
-    if w.validateconfig.is_none() {
-        w.validateconfig = Some(NamedTempFile::new().expect("Could not create temporary file"));
+    if w.validate.validateconfig.is_none() {
+        w.validate.validateconfig =
+            Some(tempfile::NamedTempFile::new().expect("Could not create temporary file"));
     }
 
-    writeln!(w.validateconfig.as_ref().unwrap(), "{}", config)
+    use std::io::Write;
+    writeln!(w.validate.validateconfig.as_ref().unwrap(), "{}", config)
         .expect("Couldn't write temporary config");
 }
 
 #[given(expr = "Validate is activated")]
+#[cfg(feature = "validate")]
 fn activate_validate(w: &mut World) -> Result<(), anyhow::Error> {
-    debug_assert!(w.runner.is_none(), "Validate has already been activated");
+    debug_assert!(
+        w.validate.runner.is_none(),
+        "Validate has already been activated"
+    );
 
-    if let Some(validateconfig) = w.validateconfig.take() {
+    if let Some(validateconfig) = w.validate.validateconfig.take() {
         let config_temp_path = validateconfig.into_temp_path();
         let path = config_temp_path
             .as_os_str()
@@ -236,14 +266,14 @@ fn activate_validate(w: &mut World) -> Result<(), anyhow::Error> {
         gst::debug!(CAT, "Got config: {}", &path);
         config_temp_path.keep().expect("Could not keep config");
 
-        env::set_var("GST_VALIDATE_CONFIG", path);
+        std::env::set_var("GST_VALIDATE_CONFIG", path);
     }
 
     gstvalidate::init();
     let runner = gstvalidate::Runner::new();
-    let _ = w.runner.insert(runner.clone());
+    let _ = w.validate.runner.insert(runner.clone());
     let pipeline = w.get_pipeline()?;
-    w.monitor = gstvalidate::Monitor::factory_create(
+    w.validate.monitor = gstvalidate::Monitor::factory_create(
         pipeline.upcast_ref::<gst::Object>(),
         &runner,
         gstvalidate::Monitor::NONE,
@@ -421,7 +451,7 @@ pub mod prelude {
     pub use crate::{check_significant_color_on_element, get_last_frame_on_element, World};
     pub use cucumber::*;
     pub use glib;
-    pub use gst;
     #[doc(hidden)]
     pub use gst::prelude::*;
+    pub use gstreamer as gst;
 }

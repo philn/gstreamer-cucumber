@@ -12,30 +12,14 @@ jobs:
   release:
     name: Deploy Documentation
     runs-on: ubuntu-latest
-    env:
-      PKG_CONFIG_PATH: "/usr/local/lib/x86_64-linux-gnu/pkgconfig"
-      GST_PLUGIN_SYSTEM_PATH: "/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0"
-      GST_PLUGIN_SCANNER: "/usr/local/libexec/gstreamer-1.0/gst-plugin-scanner"
-      LD_LIBRARY_PATH: "/usr/local/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-      - name: Install Build Dependencies
+      - name: Install Dependencies
         run: |
          sudo apt update
-         sudo apt install libglib2.0-dev ninja-build
-         sudo python -m pip install --upgrade pip setuptools wheel
-         sudo pip install meson==0.60.3
-
-      - name: Build GStreamer 1.21
-        run: |
-          git clone --depth 1 https://gitlab.freedesktop.org/gstreamer/gstreamer.git --branch main
-          pushd gstreamer
-          meson build -Dprefix=/usr/local -Ddoc=disabled -Dtests=disabled -Dintrospection=disabled -Dges=disabled -Dqt5=disabled -Dgst-examples=disabled -Dexamples=disabled -Dgtk_doc=disabled -Dlibav=disabled -Dlibnice=disabled -Dpython=disabled -Dugly=disabled -Dgood=disabled -Ddevtools=enabled -Dvaapi=disabled
-          ninja -C build
-          sudo ninja -C build install
-          popd
+         sudo apt install libgstreamer1.0-dev libgstreamer-plugins-{bad,base}1.0-dev 
 
       - name: Build Documentation
         run: cargo doc --no-deps

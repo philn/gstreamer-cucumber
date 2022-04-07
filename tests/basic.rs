@@ -2,7 +2,7 @@ use glib;
 use gstreamer_cucumber::World;
 
 async fn async_main() -> Result<(), anyhow::Error> {
-    gst::init()?;
+    gstreamer::init()?;
     World::run("tests/features/basic.feature", None).await;
     Ok(())
 }

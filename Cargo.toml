@@ -14,9 +14,10 @@ readme = "README.md"
 [dependencies]
 cucumber = "0.12"
 async-trait = "0.1.52"
-gst = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer", features = ["v1_20", "ser_de"] }
-gstvideo = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-video" }
-gstvalidate = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-validate" }
+# TODO: Switch to upstream repo after gstreamer-validate made it upstream...
+gstreamer = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer" }
+gstreamer-video = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-video" }
+gstreamer-validate = { git = "https://gitlab.freedesktop.org/philn/gstreamer-rs.git", branch = "validate-crate", package = "gstreamer-validate", features = ["v1_22"], optional = true }
 anyhow = "1"
 tempfile = "3"
 once_cell = "1.0"
@@ -29,3 +30,6 @@ glib = "0.15"
 [[test]]
 name = "basic"
 harness = false
+
+[features]
+validate = ["gstreamer-validate"]

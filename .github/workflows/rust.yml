@@ -13,35 +13,25 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-    env:
-      PKG_CONFIG_PATH: "/usr/local/lib/x86_64-linux-gnu/pkgconfig"
-      GST_PLUGIN_SYSTEM_PATH: "/usr/local/lib/x86_64-linux-gnu/gstreamer-1.0"
-      GST_PLUGIN_SCANNER: "/usr/local/libexec/gstreamer-1.0/gst-plugin-scanner"
-      LD_LIBRARY_PATH: "/usr/local/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH"
+    container: restreamio/gstreamer:2022-04-11T16-15-11Z-dev
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Install Build Dependencies
-      run: |
-        sudo apt update
-        sudo apt install libglib2.0-dev ninja-build
-        sudo python -m pip install --upgrade pip setuptools wheel
-        sudo pip install meson==0.60.3
-
-    - name: Build GStreamer 1.21
-      run: |
-        git clone --depth 1 https://gitlab.freedesktop.org/gstreamer/gstreamer.git --branch main
-        pushd gstreamer
-        meson build -Dprefix=/usr/local -Ddoc=disabled -Dtests=disabled -Dintrospection=disabled -Dges=disabled -Dqt5=disabled -Dgst-examples=disabled -Dexamples=disabled -Dgtk_doc=disabled -Dlibav=disabled -Dlibnice=disabled -Dpython=disabled -Dugly=disabled -Dgood=disabled -Ddevtools=enabled -Dvaapi=disabled
-        ninja -C build
-        sudo ninja -C build install
-        popd
-
-    - name: rustfmt
-      run: cargo fmt -- --check
-    - name: Build
-      run: cargo build --verbose --features validate
-    - name: Run tests
-      run: cargo test --verbose --features validate
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: -- --check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features validate

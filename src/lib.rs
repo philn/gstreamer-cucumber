@@ -45,6 +45,12 @@ pub struct World {
     pub extra_data: gst::Structure,
 }
 
+impl Drop for World {
+    fn drop(&mut self) {
+        let _ = self.set_pipeline_state("stop".to_string());
+    }
+}
+
 impl World {
     /// Main entry point for the test harness. Input is the path to a Gherkin
     /// .feature file defining the scenario to run. `extra_data` is an optional
@@ -111,6 +117,69 @@ impl World {
         self.pipeline
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Pipeline not configured yet"))
+    }
+
+    /// Changes the pipeline state, supported values for `state` are `stop`,
+    /// `prepare`, `pause` and `play`. When stopping we make sure emit an EOS
+    /// event, ensuring all elements have handled it and cleaned up their
+    /// internal state properly.
+    fn set_pipeline_state(&self, state: String) -> Result<(), anyhow::Error> {
+        let pipeline = self.get_pipeline()?;
+
+        let target_state = match state.as_str() {
+            "stop" => gst::State::Null,
+            "prepare" => gst::State::Ready,
+            "pause" => gst::State::Paused,
+            "play" => gst::State::Playing,
+            _ => panic!("Invalid state name: {}", state),
+        };
+
+        if target_state == gst::State::Null {
+            let (_success, current, _pending) = pipeline.state(gst::ClockTime::NONE);
+            if current == target_state {
+                return Ok(());
+            }
+
+            // gst-validate expects the EOS event to be matched with a previous flush sequence (?).
+            let flush = if cfg!(feature = "validate") {
+                true
+            } else {
+                false
+            };
+
+            let seqnum = gst::event::Seqnum::next();
+            if flush {
+                pipeline.send_event(gst::event::FlushStart::new());
+                pipeline.send_event(gst::event::FlushStop::builder(true).seqnum(seqnum).build());
+            }
+
+            // Send EOS event and wait until all sinks have received it.
+            pipeline.send_event(gst::event::Eos::builder().seqnum(seqnum).build());
+
+            let bus = pipeline.bus().unwrap();
+            for msg in bus.iter_timed(gst::ClockTime::NONE) {
+                use gst::MessageView;
+
+                match msg.view() {
+                    MessageView::Eos(..) => break,
+                    MessageView::Error(err) => {
+                        eprintln!(
+                            "Error from {:?}: {} ({:?})",
+                            err.src().map(|s| s.path_string()),
+                            err.error(),
+                            err.debug()
+                        );
+                        break;
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        pipeline
+            .set_state(target_state)
+            .map(|_| ())
+            .map_err(|_| anyhow::anyhow!("Unable to set pipeline state"))
     }
 
     fn find_element_property(
@@ -292,17 +361,8 @@ fn activate_validate(w: &mut World) -> Result<(), anyhow::Error> {
 }
 
 #[when(expr = "I {word} the pipeline")]
-fn set_state(w: &mut World, state: String) -> Result<(), anyhow::Error> {
-    w.get_pipeline()?
-        .set_state(match state.as_str() {
-            "stop" => gst::State::Null,
-            "prepare" => gst::State::Ready,
-            "pause" => gst::State::Paused,
-            "play" => gst::State::Playing,
-            _ => panic!("Invalid state name: {}", state),
-        })
-        .map(|_| ())
-        .map_err(|_| anyhow::anyhow!("Unable to set pipeline state"))
+pub fn set_state(w: &mut World, state: String) -> Result<(), anyhow::Error> {
+    w.set_pipeline_state(state)
 }
 
 fn get_last_frame(w: &World, element_name: &str) -> Result<gst::Sample, anyhow::Error> {

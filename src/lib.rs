@@ -524,4 +524,5 @@ pub mod prelude {
     #[doc(hidden)]
     pub use gst::prelude::*;
     pub use gstreamer as gst;
+    pub use gstreamer_video as gstvideo;
 }

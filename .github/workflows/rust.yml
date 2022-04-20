@@ -14,7 +14,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: restreamio/gstreamer:2022-04-11T16-15-11Z-dev
+    container: registry.freedesktop.org/gstreamer/gstreamer-rs/debian/bullseye-slim:1.60-2022-04-07.0
 
     steps:
       - uses: actions/checkout@v2

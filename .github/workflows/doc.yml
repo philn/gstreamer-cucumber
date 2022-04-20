@@ -11,16 +11,11 @@ env:
 jobs:
   release:
     name: Deploy Documentation
-    runs-on: ubuntu-latest
+    runs-on: restreamio/gstreamer:1.18.5.0-prod
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-      - name: Install Dependencies
-        run: |
-         sudo apt update
-         sudo apt install libgstreamer1.0-dev libgstreamer-plugins-{bad,base}1.0-dev 
-
       - name: Build Documentation
         run: cargo doc --no-deps
       - name: Deploy Documentation

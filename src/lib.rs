@@ -436,6 +436,7 @@ pub async fn check_significant_color_on_element(
     // FIXME: Make this configurable?
     let timeout = Duration::from_secs(5);
 
+    let mut current_color = "".to_string();
     loop {
         let sample = get_last_frame_on_element(w, sink)?;
 
@@ -472,10 +473,12 @@ pub async fn check_significant_color_on_element(
 
         let expected = expected.to_lowercase();
         for rgb in &res {
-            let color = color_name::Color::similar([rgb.r, rgb.g, rgb.b]).to_lowercase();
+            current_color = color_name::Color::similar([rgb.r, rgb.g, rgb.b])
+                .to_lowercase()
+                .to_string();
 
-            gst::debug!(CAT, "Got {}", color);
-            if color == expected {
+            gst::debug!(CAT, "Got {}", current_color);
+            if current_color == expected {
                 if first_expected.is_none() {
                     let _ = first_expected.insert(SystemTime::now());
                 }
@@ -484,7 +487,7 @@ pub async fn check_significant_color_on_element(
                 if first_expected.unwrap().elapsed().unwrap().as_millis() >= 1000 {
                     gst::info!(
                         CAT,
-                        "Got right color after {}ms",
+                        "Got expected color after {}ms",
                         first_expected
                             .unwrap()
                             .duration_since(start)
@@ -499,10 +502,11 @@ pub async fn check_significant_color_on_element(
         if let Ok(elapsed) = start.elapsed() {
             if elapsed >= timeout {
                 return Err(anyhow::anyhow!(
-                    "Timeout reached, color {} not detected on {} after {} seconds",
+                    "{} seconds timeout reached, expected color {} on {} but got {} instead",
+                    timeout.as_secs(),
                     expected,
                     sink.name(),
-                    timeout.as_secs()
+                    current_color,
                 ));
             }
         }

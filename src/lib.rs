@@ -365,7 +365,7 @@ pub fn set_state(w: &mut World, state: String) -> Result<(), anyhow::Error> {
     w.set_pipeline_state(state)
 }
 
-fn get_last_frame(w: &World, element_name: &str) -> Result<gst::Sample, anyhow::Error> {
+fn get_last_frame(w: &World, element_name: &str) -> Result<Option<gst::Sample>, anyhow::Error> {
     let element = w
         .get_pipeline()?
         .downcast_ref::<gst::Bin>()
@@ -381,7 +381,7 @@ fn get_last_frame(w: &World, element_name: &str) -> Result<gst::Sample, anyhow::
 pub fn get_last_frame_on_element(
     _w: &World,
     element: &gst::Element,
-) -> Result<gst::Sample, anyhow::Error> {
+) -> Result<Option<gst::Sample>, anyhow::Error> {
     let enable_last_sample = element
         .try_property::<bool>("enable-last-sample")
         .map_err(|e| {
@@ -393,17 +393,33 @@ pub fn get_last_frame_on_element(
         })?;
 
     if !enable_last_sample {
-        return Err(anyhow::anyhow!("Property `enable-last-sample` not `true` on: {} - you need to set it when defining the pipeline", element.name()));
+        anyhow::bail!("Property `enable-last-sample` not `true` on: {} - you need to set it when defining the pipeline", element.name());
     }
 
-    Ok(element.property::<gst::Sample>("last-sample"))
+    Ok(element.property::<Option<gst::Sample>>("last-sample"))
 }
 
 #[then(expr = "The user can see a frame on {word}")]
-fn check_last_frame(w: &mut World, element_name: String) -> Result<(), anyhow::Error> {
+async fn check_last_frame(w: &mut World, element_name: String) -> Result<(), anyhow::Error> {
     let _ = w.get_pipeline()?.state(gst::ClockTime::NONE);
+    let timeout = Duration::from_secs(5);
 
-    get_last_frame(w, &element_name).map(|_| ())
+    let start = SystemTime::now();
+    loop {
+        if get_last_frame(w, &element_name)?.is_some() {
+            return Ok(());
+        }
+
+        task::sleep(Duration::from_millis(500)).await;
+        if let Ok(elapsed) = start.elapsed() {
+            if elapsed >= timeout {
+                anyhow::bail!(
+                    "Timeout reached, video sink still not pre-rolled after {} seconds",
+                    timeout.as_secs()
+                );
+            }
+        }
+    }
 }
 
 #[then(expr = "I should see significant color {word} on {word}")]
@@ -438,7 +454,10 @@ pub async fn check_significant_color_on_element(
 
     let mut current_color = "".to_string();
     loop {
-        let sample = get_last_frame_on_element(w, sink)?;
+        let sample = match get_last_frame_on_element(w, sink)? {
+            Some(sample) => sample,
+            None => continue,
+        };
 
         let in_info = gstvideo::VideoInfo::from_caps(sample.caps().expect("No caps in sample"))
             .unwrap_or_else(|_| panic!("Invalid video caps: {}", sample.caps().unwrap()));

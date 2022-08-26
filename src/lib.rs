@@ -16,7 +16,6 @@ use std::time::SystemTime;
 use gstreamer_validate::prelude::*;
 
 use gstreamer as gst;
-use gstreamer_video as gstvideo;
 
 #[cfg(feature = "validate")]
 use gstreamer_validate as gstvalidate;
@@ -423,126 +422,10 @@ async fn check_last_frame(w: &mut World, element_name: String) -> Result<(), any
     }
 }
 
-#[then(expr = "I should see significant color {word} on {word}")]
-async fn check_significant_color(
-    w: &mut World,
-    expected: String,
-    sink_name: String,
-) -> Result<(), anyhow::Error> {
-    let sink = w
-        .get_pipeline()?
-        .downcast_ref::<gst::Bin>()
-        .unwrap()
-        .by_name_recurse_up(&sink_name)
-        .ok_or_else(|| anyhow::anyhow!("Could not find element: {}", sink_name))?;
-
-    check_significant_color_on_element(w, expected, &sink).await
-}
-
-/// Verify that the dominant color on the given video sink is the one described
-/// by `expected`. This function returns an error after 5 seconds of mis-matched
-/// frames polling.
-pub async fn check_significant_color_on_element(
-    w: &mut World,
-    expected: String,
-    sink: &gst::Element,
-) -> Result<(), anyhow::Error> {
-    let start = SystemTime::now();
-    let mut first_expected: Option<SystemTime> = None;
-
-    // FIXME: Make this configurable?
-    let timeout = Duration::from_secs(5);
-
-    let mut current_color = "".to_string();
-    loop {
-        let sample = match get_last_frame_on_element(w, sink)? {
-            Some(sample) => sample,
-            None => continue,
-        };
-
-        let in_info = gstvideo::VideoInfo::from_caps(sample.caps().expect("No caps in sample"))
-            .unwrap_or_else(|_| panic!("Invalid video caps: {}", sample.caps().unwrap()));
-
-        let out_info = gstvideo::VideoInfo::builder(
-            gstvideo::VideoFormat::Argb,
-            in_info.width(),
-            in_info.height(),
-        )
-        .fps(in_info.fps())
-        .build()
-        .unwrap();
-
-        let videoconvert = gstvideo::VideoConverter::new(&in_info, &out_info, None)
-            .expect("Could not create VideoConverter");
-        let frame =
-            gstvideo::VideoFrame::from_buffer_readable(sample.buffer_owned().unwrap(), &in_info)
-                .expect("Could not map frame");
-
-        let buffer = gst::Buffer::with_size(out_info.size()).unwrap();
-        let mut outframe = gstvideo::VideoFrame::from_buffer_writable(buffer, &out_info).unwrap();
-        videoconvert.frame(&frame, &mut outframe);
-        let res = match color_thief::get_palette(
-            outframe.plane_data(0).unwrap(),
-            color_thief::ColorFormat::Argb,
-            5,
-            2,
-        ) {
-            Err(e) => panic!("Could not extract colors: {:?}", e),
-            Ok(v) => v,
-        };
-
-        let expected = expected.to_lowercase();
-        for rgb in &res {
-            current_color = color_name::Color::similar([rgb.r, rgb.g, rgb.b])
-                .to_lowercase()
-                .to_string();
-
-            gst::debug!(CAT, "Got {}", current_color);
-            if current_color == expected {
-                if first_expected.is_none() {
-                    let _ = first_expected.insert(SystemTime::now());
-                }
-
-                // Ensuring that we have the right color for 1second
-                if first_expected.unwrap().elapsed().unwrap().as_millis() >= 1000 {
-                    gst::info!(
-                        CAT,
-                        "Got expected color after {}ms",
-                        first_expected
-                            .unwrap()
-                            .duration_since(start)
-                            .unwrap()
-                            .as_millis()
-                    );
-                    return Ok(());
-                }
-            }
-        }
-
-        if let Ok(elapsed) = start.elapsed() {
-            if elapsed >= timeout {
-                return Err(anyhow::anyhow!(
-                    "{} seconds timeout reached, expected color {} on {} but got {} instead",
-                    timeout.as_secs(),
-                    expected,
-                    sink.name(),
-                    current_color,
-                ));
-            }
-        }
-
-        // Wait for next frame.
-        task::sleep(Duration::from_millis(
-            1000 / (in_info.fps().numer() as u64 / in_info.fps().denom() as u64),
-        ))
-        .await;
-    }
-}
-
 // Re-export all the traits in a prelude module, so that applications
 // can always "use gstreamer_cucumber::prelude::*" without getting conflicts
 pub mod prelude {
-    pub use crate::{check_significant_color_on_element, get_last_frame_on_element, World};
+    pub use crate::{get_last_frame_on_element, World};
     pub use cucumber::*;
     pub use glib;
     #[doc(hidden)]

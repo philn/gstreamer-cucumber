@@ -23,8 +23,6 @@ tempfile = "3"
 once_cell = "1.0"
 futures = "0.3.17"
 async-std = {version = "1.10.0", features = ["attributes"]}
-color-thief = "0.2.2"
-color-name = "1.0.0"
 glib = "0.15"
 
 [[test]]

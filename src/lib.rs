@@ -317,6 +317,7 @@ fn validate_no_reports(w: &mut World) -> Result<(), anyhow::Error> {
 #[given(regex = r"The validate configuration '(.*)'$")]
 #[cfg(feature = "validate")]
 fn add_validate_config(w: &mut World, config: String) {
+    gstvalidate::init();
     if w.validate.validateconfig.is_none() {
         w.validate.validateconfig =
             Some(tempfile::NamedTempFile::new().expect("Could not create temporary file"));

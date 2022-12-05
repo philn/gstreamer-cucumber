@@ -352,11 +352,11 @@ fn activate_validate(w: &mut World) -> Result<(), anyhow::Error> {
     let runner = gstvalidate::Runner::new();
     let _ = w.validate.runner.insert(runner.clone());
     let pipeline = w.get_pipeline()?;
-    w.validate.monitor = gstvalidate::Monitor::factory_create(
+    w.validate.monitor = Some(gstvalidate::Monitor::factory_create(
         pipeline.upcast_ref::<gst::Object>(),
         &runner,
         gstvalidate::Monitor::NONE,
-    );
+    ));
     Ok(())
 }
 

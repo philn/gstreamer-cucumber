@@ -15,9 +15,9 @@ readme = "README.md"
 cucumber = "0.12"
 async-trait = "0.1.52"
 # TODO: Switch to upstream repo after gstreamer-validate made it upstream...
-gstreamer = { git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs.git", features = ["v1_18"] }
-gstreamer-video = { git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs.git", features = ["v1_18"] }
-gstreamer-validate = { git = "https://gitlab.freedesktop.org/gstreamer/gstreamer-rs.git", optional = true }
+gstreamer = { version="0.19", features = ["v1_18"] }
+gstreamer-video = { version="0.19", features = ["v1_18"] }
+gstreamer-validate = { version="0.19", optional = true }
 anyhow = "1"
 tempfile = "3"
 once_cell = "1.0"

@@ -28,7 +28,7 @@ jobs:
         sudo apt update
         sudo apt install libglib2.0-dev ninja-build
         sudo python -m pip install --upgrade pip setuptools wheel
-        sudo pip install meson==0.60.3
+        sudo pip install meson==0.64.1
 
     - name: Build GStreamer 1.21
       run: |

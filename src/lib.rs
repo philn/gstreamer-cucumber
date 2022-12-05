@@ -382,15 +382,12 @@ pub fn get_last_frame_on_element(
     _w: &World,
     element: &gst::Element,
 ) -> Result<Option<gst::Sample>, anyhow::Error> {
-    let enable_last_sample = element
-        .try_property::<bool>("enable-last-sample")
-        .map_err(|e| {
-            anyhow::anyhow!(
-                "No property `enable-last-sample` on {}: {:?}",
-                element.name(),
-                e
-            )
-        })?;
+    let enable_last_sample = if element.find_property("enable-last-sample").is_some() {
+        element.property::<bool>("enable-last-sample")
+    } else {
+        gst::error!(CAT, "Sink doesn't have a `enable-last-sample' property");
+        false
+    };
 
     if !enable_last_sample {
         anyhow::bail!("Property `enable-last-sample` not `true` on: {} - you need to set it when defining the pipeline", element.name());

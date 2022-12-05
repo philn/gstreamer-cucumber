@@ -11,7 +11,7 @@ env:
 jobs:
   release:
     name: Deploy Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     steps:
       - name: Checkout Repository
@@ -19,7 +19,7 @@ jobs:
       - name: Install Dependencies
         run: |
          sudo apt update
-         sudo apt install libgstreamer1.0-dev libgstreamer-plugins-{bad,base}1.0-dev 
+         sudo apt install libgstreamer1.0-dev libgstreamer-plugins-{bad,base}1.0-dev
 
       - name: Build Documentation
         run: cargo doc --no-deps

@@ -373,13 +373,12 @@ fn get_last_frame(w: &World, element_name: &str) -> Result<Option<gst::Sample>, 
         .by_name_recurse_up(element_name)
         .ok_or_else(|| anyhow::anyhow!("Could not find element: {}", element_name))?;
 
-    get_last_frame_on_element(w, &element)
+    get_last_frame_on_element(&element)
 }
 
 /// Retrieve the most recent gst::Sample from the given video sink. We assume
 /// the `enable-last-sample` property is enabled on this element.
 pub fn get_last_frame_on_element(
-    _w: &World,
     element: &gst::Element,
 ) -> Result<Option<gst::Sample>, anyhow::Error> {
     let enable_last_sample = if element.find_property("enable-last-sample").is_some() {

@@ -99,7 +99,7 @@ impl World {
         pipeline_description: String,
     ) -> Result<(), anyhow::Error> {
         gst::debug!(CAT, "Pipeline is: '{}'", pipeline_description);
-        self.pipeline = Some(gst::parse_launch(&pipeline_description)?);
+        self.pipeline = Some(gst::parse::launch(&pipeline_description)?);
         Ok(())
     }
 

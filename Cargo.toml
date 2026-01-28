@@ -12,7 +12,7 @@ categories = ["multimedia"]
 readme = "README.md"
 
 [dependencies]
-cucumber = "0.12"
+cucumber = "0.22"
 async-trait = "0.1.52"
 # TODO: Switch to upstream repo after gstreamer-validate made it upstream...
 gstreamer = { version="0.24", features = ["v1_18"] }

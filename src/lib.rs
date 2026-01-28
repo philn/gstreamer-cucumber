@@ -1,11 +1,9 @@
 use async_std::task;
-use async_trait::async_trait;
-use cucumber::{given, then, when, WorldInit};
+use cucumber::{given, then, when, World as _};
 use gstreamer::glib;
 use gstreamer::prelude::*;
 use once_cell::sync::Lazy;
 use std::cmp;
-use std::convert::Infallible;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -31,7 +29,7 @@ struct Validate {
     validateconfig: Option<tempfile::NamedTempFile>,
 }
 
-#[derive(Debug, WorldInit)]
+#[derive(Debug, cucumber::World)]
 pub struct World {
     pipeline: Option<gst::Element>,
 
@@ -72,7 +70,7 @@ impl World {
                     gst::info!(CAT, "Before: {:?} {:?}", feature, world);
                 })
             })
-            .after(|_, _, _, _world| {
+            .after(|_feat, _rule, _scenario, _finished, _world| {
                 Box::pin(async move {
                     #[cfg(feature = "validate")]
                     if let Some(world) = _world.as_ref() {
@@ -227,11 +225,8 @@ impl World {
     }
 }
 
-#[async_trait(?Send)]
-impl cucumber::World for World {
-    type Error = Infallible;
-
-    async fn new() -> Result<Self, Self::Error> {
+impl Default for World {
+    fn default() -> Self {
         #[cfg(feature = "validate")]
         let validate = Validate {
             runner: None,
@@ -239,13 +234,13 @@ impl cucumber::World for World {
             validateconfig: None,
         };
 
-        Ok(Self {
+        Self {
             pipeline: None,
             #[cfg(feature = "validate")]
             validate,
             current_feature_path: None,
             extra_data: gst::Structure::new_empty("extra"),
-        })
+        }
     }
 }
 
